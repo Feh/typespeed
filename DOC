@@ -1,1 +1,2 @@
 https://www.kernel.org/doc/Documentation/kbuild/modules.txt
+drivers/tty/sysrq.c

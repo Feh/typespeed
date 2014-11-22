@@ -2,6 +2,63 @@
 #include <linux/init.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/slab.h>
+#include <linux/input.h>
+
+/* Input handling */
+
+static const struct input_device_id typespeed_ids[] = {
+    /* This is just ... keyboards? Let's hope. */
+    {
+        .flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+        .evbit = { BIT_MASK(EV_KEY) },
+    },
+    { },
+};
+
+static int typespeed_connect(struct input_handler *handler,
+             struct input_dev *dev,
+             const struct input_device_id *id)
+{
+    struct input_handle *handle;
+    handle = kzalloc(sizeof(*handle), GFP_KERNEL);
+    if(!handle)
+        return -ENOMEM;
+    handle->dev = dev;
+    handle->handler = handler;
+    handle->name = "typespeed";
+    if(input_register_handle(handle)) {
+        printk("Failed to register input handle");
+        input_unregister_handle(handle);
+    }
+    return 0;
+}
+
+static void typespeed_disconnect(struct input_handle *handle)
+{
+    input_close_device(handle);
+    input_unregister_handle(handle);
+}
+
+static void typespeed_event(struct input_handle *handle,
+             unsigned int type, unsigned int code, int value)
+{
+    switch (type) {
+    case EV_KEY:
+            printk("Event: type=%d, code=%d, value=%d", type, code, value);
+        break;
+    }
+}
+
+static struct input_handler typespeed_input_handler = {
+    .connect    = typespeed_connect,
+    .disconnect = typespeed_disconnect,
+    .event      = typespeed_event,
+    .name       = "typespeed",
+    // .id_table   = typespeed_ids,
+};
+
+/* /roc file handling */
 
 static int typespeed_proc_show(struct seq_file *m, void *v)
 {
@@ -23,16 +80,24 @@ static const struct file_operations typespeed_proc_fops = {
     .release    = single_release,
 };
 
+/* Initialization & Exiting */
+
 static int __init typespeed_init(void)
 {
-    printk ("Typespeed loaded!\n");
+    int error;
+    printk("Typespeed loaded!\n");
     proc_create("typespeed", 0, NULL, &typespeed_proc_fops);
+    if((error = input_register_handler(&typespeed_input_handler)))
+        printk("Failed to register input handler, error: %d", error);
+    else
+        printk("Successfully registered input handler.");
     return 0;
 }
 
 static void __exit typespeed_exit(void)
 {
     remove_proc_entry("typespeed", NULL);
+    input_unregister_handler(&typespeed_input_handler);
     printk ("Typespeed says good-bye.\n");
     return;
 }
