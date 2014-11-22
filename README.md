@@ -8,7 +8,7 @@ of. – But how fast do you type in your typical activities? When you’re
 entering commands at the shell prompt? When chatting on IRC? When
 drafting an E-Mail or a LaTeX document?
 
-This is a simple Linux Kernel providing a file `/proc/typespeed`
+This is a simple Linux Kernel module providing a file `/proc/typespeed`
 which, every time you read it (e.g. with `cat`), will give you your
 current typing speed and the number of characters typed in total since
 loading the module. Since I’m hardly ever typing at full speed for 60
