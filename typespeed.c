@@ -32,6 +32,7 @@ static int __init typespeed_init(void)
 
 static void __exit typespeed_exit(void)
 {
+    remove_proc_entry("typespeed", NULL);
     printk ("Typespeed says good-bye.\n");
     return;
 }
