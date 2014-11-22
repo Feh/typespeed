@@ -97,7 +97,7 @@ static void typespeed_event(struct input_handle *handle,
     if(code == KEY_RIGHTSHIFT || code == KEY_LEFTSHIFT ||
         code == KEY_RIGHTCTRL || code == KEY_LEFTCTRL ||
         code == KEY_RIGHTALT || code == KEY_LEFTALT ||
-        code == KEY_CAPSLOCK)
+        code == KEY_CAPSLOCK || code == KEY_BACKSPACE)
         return;
 
     printk("Event: type=%d, code=%d, value=%d\n", type, code, value);
