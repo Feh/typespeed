@@ -100,7 +100,6 @@ static void typespeed_event(struct input_handle *handle,
         code == KEY_CAPSLOCK || code == KEY_BACKSPACE)
         return;
 
-    printk("Event: type=%d, code=%d, value=%d\n", type, code, value);
     events++;
 }
 
@@ -178,7 +177,7 @@ static void __exit typespeed_exit(void)
     del_timer(&timer);
     remove_proc_entry("typespeed", NULL);
     input_unregister_handler(&typespeed_input_handler);
-    printk ("Typespeed says good-bye.\n");
+    printk ("Typespeed says good-bye. (You typed %zd keys.)\n", total);
     return;
 }
 
