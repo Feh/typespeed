@@ -21,17 +21,31 @@ static int typespeed_connect(struct input_handler *handler,
              const struct input_device_id *id)
 {
     struct input_handle *handle;
+
     handle = kzalloc(sizeof(*handle), GFP_KERNEL);
     if(!handle)
         return -ENOMEM;
+
     handle->dev = dev;
     handle->handler = handler;
     handle->name = "typespeed";
+
     if(input_register_handle(handle)) {
         printk("Failed to register input handle");
-        input_unregister_handle(handle);
+        goto err;
     }
+
+    if(input_open_device(handle)) {
+        printk("Failed to open input device");
+        goto unregister;
+    }
+
     return 0;
+
+unregister:
+    input_unregister_handle(handle);
+err:
+    return -1;
 }
 
 static void typespeed_disconnect(struct input_handle *handle)
@@ -45,7 +59,7 @@ static void typespeed_event(struct input_handle *handle,
 {
     switch (type) {
     case EV_KEY:
-            printk("Event: type=%d, code=%d, value=%d", type, code, value);
+            printk("Event: type=%d, code=%d, value=%d\n", type, code, value);
         break;
     }
 }
@@ -55,7 +69,7 @@ static struct input_handler typespeed_input_handler = {
     .disconnect = typespeed_disconnect,
     .event      = typespeed_event,
     .name       = "typespeed",
-    // .id_table   = typespeed_ids,
+    .id_table   = typespeed_ids,
 };
 
 /* /roc file handling */
