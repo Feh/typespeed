@@ -4,6 +4,33 @@
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/input.h>
+#include <linux/timer.h>
+#include <linux/mutex.h>
+
+/* Our internal stats, protected by a single mutex */
+
+struct mutex lock;
+static int t;
+static size_t events;
+#define LENGTH 60
+static size_t interval[LENGTH];
+
+/* Per-second callback for rotation */
+
+static struct timer_list timer;
+
+static void timer_callback(unsigned long data)
+{
+    mutex_lock(&lock);
+    interval[t] = events;
+    t = (t + 1) % LENGTH;
+    mutex_unlock(&lock);
+
+    events = 0;
+
+    /* We’ll be back… in about a second! */
+    mod_timer(&timer, jiffies + msecs_to_jiffies(1000));
+}
 
 /* Input handling */
 
@@ -72,6 +99,7 @@ static void typespeed_event(struct input_handle *handle,
         return;
 
     printk("Event: type=%d, code=%d, value=%d\n", type, code, value);
+    events++;
 }
 
 static struct input_handler typespeed_input_handler = {
@@ -82,13 +110,32 @@ static struct input_handler typespeed_input_handler = {
     .id_table   = typespeed_ids,
 };
 
-/* /roc file handling */
+/* /proc file handling */
 
 static int typespeed_proc_show(struct seq_file *m, void *v)
 {
-    char string[] = "Can you read me?";
+    int i;
+    size_t sum10 = 0;
+    size_t sum30;
+    size_t sum;
 
-    seq_printf(m, "%s\n", string);
+    mutex_lock(&lock);
+
+    for(i = 0; i < 10; i++)
+        sum10 += interval[(LENGTH + t - i)%LENGTH];
+
+    sum30 = sum10;
+    for(; i < 30; i++)
+        sum30 += interval[(LENGTH + t - i)%LENGTH];
+
+    sum = sum30;
+    for(; i < LENGTH; i++)
+        sum += interval[(LENGTH + t - i)%LENGTH];
+
+    mutex_unlock(&lock);
+
+    seq_printf(m, "%zd %zd %zd\n",
+        sum10 * LENGTH / 10, sum30 * LENGTH / 30, sum);
     return 0;
 }
 
@@ -109,17 +156,24 @@ static const struct file_operations typespeed_proc_fops = {
 static int __init typespeed_init(void)
 {
     int error;
-    printk("Typespeed loaded!\n");
+
+    mutex_init(&lock);
+
+    setup_timer(&timer, timer_callback, 0);
+    mod_timer(&timer, jiffies + msecs_to_jiffies(1000));
+
     proc_create("typespeed", 0, NULL, &typespeed_proc_fops);
+
     if((error = input_register_handler(&typespeed_input_handler)))
         printk("Failed to register input handler, error: %d", error);
-    else
-        printk("Successfully registered input handler.");
+
+    printk("Typespeed successfully initialized! Type on!\n");
     return 0;
 }
 
 static void __exit typespeed_exit(void)
 {
+    del_timer(&timer);
     remove_proc_entry("typespeed", NULL);
     input_unregister_handler(&typespeed_input_handler);
     printk ("Typespeed says good-bye.\n");
