@@ -12,6 +12,7 @@
 struct mutex lock;
 static int t;
 static size_t events;
+static size_t total;
 #define LENGTH 60
 static size_t interval[LENGTH];
 
@@ -24,6 +25,7 @@ static void timer_callback(unsigned long data)
     mutex_lock(&lock);
     interval[t] = events;
     t = (t + 1) % LENGTH;
+    total += events;
     mutex_unlock(&lock);
 
     events = 0;
@@ -134,8 +136,8 @@ static int typespeed_proc_show(struct seq_file *m, void *v)
 
     mutex_unlock(&lock);
 
-    seq_printf(m, "%zd %zd %zd\n",
-        sum10 * LENGTH / 10, sum30 * LENGTH / 30, sum);
+    seq_printf(m, "%zd %zd %zd %zd\n",
+        sum10 * LENGTH / 10, sum30 * LENGTH / 30, sum, total);
     return 0;
 }
 
