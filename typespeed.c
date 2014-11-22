@@ -57,11 +57,14 @@ static void typespeed_disconnect(struct input_handle *handle)
 static void typespeed_event(struct input_handle *handle,
              unsigned int type, unsigned int code, int value)
 {
-    switch (type) {
-    case EV_KEY:
-            printk("Event: type=%d, code=%d, value=%d\n", type, code, value);
-        break;
-    }
+    if(type != EV_KEY)
+        return;
+
+    /* value: 0 = key up, 1 = key press, 2 = key hold? */
+    if(value != 1)
+        return;
+
+    printk("Event: type=%d, code=%d, value=%d\n", type, code, value);
 }
 
 static struct input_handler typespeed_input_handler = {
