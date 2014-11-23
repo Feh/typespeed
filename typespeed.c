@@ -100,6 +100,13 @@ static void typespeed_event(struct input_handle *handle,
         code == KEY_CAPSLOCK || code == KEY_BACKSPACE)
         return;
 
+    /* Note that this is *not* protected by the mutex; in particular
+     * it could be possible that in a race condition this value would
+     * be set to zero and then revert to the old value + 1. In order
+     * to keep this function as fast as possible we do not lock the
+     * mutex, otherwise, by repeatedly cat-ing /proc/typespeed one
+     * could cause a “keyboard event denial of service”, which would
+     * be bad. We’d much rather botch up the statistics. */
     events++;
 }
 
