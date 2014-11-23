@@ -23,8 +23,8 @@ static struct timer_list timer;
 static void timer_callback(unsigned long data)
 {
     mutex_lock(&lock);
-    interval[t] = events;
     t = (t + 1) % LENGTH;
+    interval[t] = events;
     total += events;
     mutex_unlock(&lock);
 
