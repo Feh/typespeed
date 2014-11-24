@@ -60,12 +60,12 @@ static int typespeed_connect(struct input_handler *handler,
     handle->name = "typespeed";
 
     if(input_register_handle(handle)) {
-        printk("Failed to register input handle");
+        printk(KERN_ERR "Failed to register input handle");
         goto err;
     }
 
     if(input_open_device(handle)) {
-        printk("Failed to open input device");
+        printk(KERN_ERR "Failed to open input device");
         goto unregister;
     }
 
@@ -173,9 +173,9 @@ static int __init typespeed_init(void)
     proc_create("typespeed", 0, NULL, &typespeed_proc_fops);
 
     if((error = input_register_handler(&typespeed_input_handler)))
-        printk("Failed to register input handler, error: %d", error);
+        printk(KERN_ERR "Failed to register input handler, error: %d", error);
 
-    printk("Typespeed successfully initialized! Type on!\n");
+    printk(KERN_INFO "Typespeed successfully initialized! Type on!\n");
     return 0;
 }
 
@@ -184,7 +184,7 @@ static void __exit typespeed_exit(void)
     del_timer(&timer);
     remove_proc_entry("typespeed", NULL);
     input_unregister_handler(&typespeed_input_handler);
-    printk ("Typespeed says good-bye. (You typed %zd keys.)\n", total);
+    printk(KERN_INFO "Typespeed says good-bye. (You typed %zd keys.)\n", total);
     return;
 }
 
