@@ -1,15 +1,18 @@
 #include <linux/init.h>
 #include <linux/input.h>
 #include <linux/module.h>
-#include <linux/mutex.h>
+#include <linux/spinlock.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/timer.h>
 
-/* Our internal stats, protected by a single mutex */
+/* Our internal stats, protected by a single spin lock.
+ * We use a spinlock here, since this will disable the timer interrupt.
+ * This is required to avoid a deadlock that happens when the timer fires
+ * while proc_show is holding the lock. */
 
-struct mutex lock;
+DEFINE_SPINLOCK(splock);
 static int t;
 static size_t events;
 static size_t total;
@@ -22,11 +25,11 @@ static struct timer_list timer;
 
 static void timer_callback(unsigned long data)
 {
-    mutex_lock(&lock);
+    spin_lock(&splock);
     t = (t + 1) % LENGTH;
     interval[t] = events;
     total += events;
-    mutex_unlock(&lock);
+    spin_unlock(&splock);
 
     events = 0;
 
@@ -127,7 +130,7 @@ static int typespeed_proc_show(struct seq_file *m, void *v)
     size_t sum30;
     size_t sum;
 
-    mutex_lock(&lock);
+    spin_lock(&splock);
 
     for(i = 0; i < 10; i++)
         sum10 += interval[(LENGTH + t - i)%LENGTH];
@@ -140,7 +143,7 @@ static int typespeed_proc_show(struct seq_file *m, void *v)
     for(; i < LENGTH; i++)
         sum += interval[(LENGTH + t - i)%LENGTH];
 
-    mutex_unlock(&lock);
+    spin_unlock(&splock);
 
     seq_printf(m, "%zd %zd %zd %zd\n",
         sum10 * LENGTH / 10, sum30 * LENGTH / 30, sum, total);
@@ -164,8 +167,6 @@ static const struct file_operations typespeed_proc_fops = {
 static int __init typespeed_init(void)
 {
     int error;
-
-    mutex_init(&lock);
 
     setup_timer(&timer, timer_callback, 0);
     mod_timer(&timer, jiffies + msecs_to_jiffies(1000));
