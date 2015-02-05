@@ -182,7 +182,7 @@ static int __init typespeed_init(void)
 
 static void __exit typespeed_exit(void)
 {
-    del_timer(&timer);
+    del_timer_sync(&timer);
     remove_proc_entry("typespeed", NULL);
     input_unregister_handler(&typespeed_input_handler);
     printk(KERN_INFO "Typespeed says good-bye. (You typed %zd keys.)\n", total);
